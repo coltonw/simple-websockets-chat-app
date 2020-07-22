@@ -1,0 +1,11 @@
+{
+  "name": "get-log",
+  "version": "1.0.0",
+  "description": "getlog through WebSockets on API Gateway",
+  "main": "src/app.js",
+  "author": "Will Colton",
+  "license": "MIT",
+  "dependencies": {
+    "aws-sdk": "^2.690.0"
+  }
+}

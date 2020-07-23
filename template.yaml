@@ -85,6 +85,25 @@ Resources:
       IntegrationType: AWS_PROXY
       IntegrationUri:
         Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${SendMessageFunction.Arn}/invocations
+  GetLogRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref PuzzleSyncWebSocket
+      RouteKey: getlog
+      AuthorizationType: NONE
+      OperationName: GetLogRoute
+      Target: !Join
+        - "/"
+        - - "integrations"
+          - !Ref GetLogInteg
+  GetLogInteg:
+    Type: AWS::ApiGatewayV2::Integration
+    Properties:
+      ApiId: !Ref PuzzleSyncWebSocket
+      Description: Get Log Integration
+      IntegrationType: AWS_PROXY
+      IntegrationUri:
+        Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${GetLogFunction.Arn}/invocations
   Deployment:
     Type: AWS::ApiGatewayV2::Deployment
     DependsOn:
@@ -240,6 +259,10 @@ Outputs:
   SendMessageFunctionArn:
     Description: "SendMessage function ARN"
     Value: !GetAtt SendMessageFunction.Arn
+
+  GetLogFunctionArn:
+    Description: "GetLog function ARN"
+    Value: !GetAtt GetLogFunction.Arn
 
   WebSocketURI:
     Description: "The WSS Protocol URI to connect to"

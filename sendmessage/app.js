@@ -33,9 +33,7 @@ exports.handler = async (event) => {
   let connectionData;
 
   try {
-    connectionData = await ddb
-      .scan({ TableName: TABLE_NAME, ProjectionExpression: "connectionId" })
-      .promise();
+    connectionData = await ddb.scan({ TableName: TABLE_NAME }).promise();
   } catch (e) {
     return { statusCode: 500, body: e.stack };
   }
@@ -46,22 +44,25 @@ exports.handler = async (event) => {
       event.requestContext.domainName + "/" + event.requestContext.stage,
   });
 
-  const postCalls = connectionData.Items.map(async ({ connectionId }) => {
-    try {
-      await apigwManagementApi
-        .postToConnection({ ConnectionId: connectionId, Data: postData })
-        .promise();
-    } catch (e) {
-      if (e.statusCode === 410) {
-        console.log(`Found stale connection, deleting ${connectionId}`);
-        await ddb
-          .delete({ TableName: TABLE_NAME, Key: { connectionId } })
+  let postCalls = connectionData.Items.map(
+    async ({ connectionId, authorized }) => {
+      if (!authorized) return;
+      try {
+        await apigwManagementApi
+          .postToConnection({ ConnectionId: connectionId, Data: postData })
           .promise();
-      } else {
-        throw e;
+      } catch (e) {
+        if (e.statusCode === 410) {
+          console.log(`Found stale connection, deleting ${connectionId}`);
+          await ddb
+            .delete({ TableName: TABLE_NAME, Key: { connectionId } })
+            .promise();
+        } else {
+          throw e;
+        }
       }
     }
-  });
+  );
 
   try {
     await Promise.all(postCalls);

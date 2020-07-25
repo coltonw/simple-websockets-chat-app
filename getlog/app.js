@@ -13,6 +13,7 @@ const { LOG_TABLE_NAME } = process.env;
 exports.handler = async (event) => {
   let logData;
 
+  console.log(1);
   try {
     logData = await ddb
       .scan({
@@ -21,8 +22,10 @@ exports.handler = async (event) => {
       })
       .promise();
   } catch (e) {
+    console.log(e);
     return { statusCode: 500, body: e.stack };
   }
+  console.log(2);
 
   const apigwManagementApi = new AWS.ApiGatewayManagementApi({
     apiVersion: "2018-11-29",
@@ -30,16 +33,20 @@ exports.handler = async (event) => {
       event.requestContext.domainName + "/" + event.requestContext.stage,
   });
 
+  console.log(3);
+
   try {
     await apigwManagementApi
       .postToConnection({
         ConnectionId: event.requestContext.connectionId,
-        Data: logData.Items,
+        Data: JSON.stringify(logData.Items),
       })
       .promise();
   } catch (e) {
+    console.log(e);
     return { statusCode: 500, body: e.stack };
   }
+  console.log(4);
 
   return { statusCode: 200, body: "Data sent." };
 };

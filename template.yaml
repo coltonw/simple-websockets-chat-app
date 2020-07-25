@@ -110,6 +110,7 @@ Resources:
       - ConnectRoute
       - SendRoute
       - DisconnectRoute
+      - GetLogRoute
     Properties:
       ApiId: !Ref PuzzleSyncWebSocket
   Stage:
@@ -234,6 +235,12 @@ Resources:
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref LogTableName
+        - Statement:
+            - Effect: Allow
+              Action:
+                - "execute-api:ManageConnections"
+              Resource:
+                - !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${PuzzleSyncWebSocket}/*"
   GetLogPermission:
     Type: AWS::Lambda::Permission
     DependsOn:
@@ -242,6 +249,29 @@ Resources:
       Action: lambda:InvokeFunction
       FunctionName: !Ref GetLogFunction
       Principal: apigateway.amazonaws.com
+  CustomAuthorizerFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: custom-authorizer/
+      Handler: index.handler
+      MemorySize: 256
+      Runtime: nodejs12.x
+      Environment:
+        Variables:
+          JWKS_URI: https://dev-danycon.us.auth0.com/.well-known/jwks.json
+          AUDIENCE: https://dev-danycon.us.auth0.com/api/v2/
+          TOKEN_ISSUER: https://dev-danycon.us.auth0.com/
+  CustomAuthorizer:
+    Type: AWS::ApiGatewayV2::Authorizer
+    Properties:
+      Name: PuzzleSyncCustomAuthorizer
+      AuthorizerCredentialsArn: arn:aws:iam::574930051498:role/service-role/auth0-danycon-authorizer-lambda-role-u5v2g27q
+      AuthorizerType: REQUEST
+      AuthorizerUri:
+        Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${CustomAuthorizerFunction.Arn}/invocations
+      IdentitySource:
+        - route.request.header.Authorization
+      ApiId: !Ref PuzzleSyncWebSocket
 
 Outputs:
   ConnectionsTableArn:
@@ -263,6 +293,10 @@ Outputs:
   GetLogFunctionArn:
     Description: "GetLog function ARN"
     Value: !GetAtt GetLogFunction.Arn
+
+  CustomAuthorizerFunctionArn:
+    Description: "CustomAuthorizer function ARN"
+    Value: !GetAtt CustomAuthorizerFunction.Arn
 
   WebSocketURI:
     Description: "The WSS Protocol URI to connect to"

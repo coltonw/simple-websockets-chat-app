@@ -237,6 +237,9 @@ Resources:
         Variables:
           TABLE_NAME: !Ref TableName
           LOG_TABLE_NAME: !Ref LogTableName
+          JWKS_URI: https://dev-danycon.us.auth0.com/.well-known/jwks.json
+          AUDIENCE: https://dev-danycon.us.auth0.com/api/v2/
+          TOKEN_ISSUER: https://dev-danycon.us.auth0.com/
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref TableName

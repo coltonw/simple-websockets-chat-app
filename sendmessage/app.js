@@ -11,6 +11,22 @@ const ddb = new AWS.DynamoDB.DocumentClient({
 const { TABLE_NAME, LOG_TABLE_NAME } = process.env;
 
 exports.handler = async (event) => {
+  let connectionData;
+
+  try {
+    connectionData = await ddb.scan({ TableName: TABLE_NAME }).promise();
+  } catch (e) {
+    return { statusCode: 500, body: e.stack };
+  }
+
+  const { authorized } =
+    connectionData.Items.find(
+      ({ connectionId }) => connectionId === event.requestContext.connectionId
+    ) || {};
+
+  if (!authorized) {
+    return { statusCode: 401, body: "Not authorized." };
+  }
   const postData = JSON.parse(event.body).data;
 
   const putParams = {
@@ -28,14 +44,6 @@ exports.handler = async (event) => {
       statusCode: 500,
       body: "Failed to add msg to log: " + JSON.stringify(err),
     };
-  }
-
-  let connectionData;
-
-  try {
-    connectionData = await ddb.scan({ TableName: TABLE_NAME }).promise();
-  } catch (e) {
-    return { statusCode: 500, body: e.stack };
   }
 
   const apigwManagementApi = new AWS.ApiGatewayManagementApi({
